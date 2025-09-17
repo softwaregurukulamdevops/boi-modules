@@ -1,0 +1,36 @@
+trigger: none
+
+pool:
+  name: TestLinux   # your self-hosted RHL agent pool
+
+steps:
+  # 1. Always install/upgrade Azure CLI to latest
+  - script: |
+      set -e
+      echo "Upgrading Azure CLI to the latest version..."
+      sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+      sudo sh -c 'echo -e "[azure-cli]
+      name=Azure CLI
+      baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+      enabled=1
+      gpgcheck=1
+      gpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo'
+
+      sudo yum install -y azure-cli || sudo yum update -y azure-cli
+
+      echo "Azure CLI version after upgrade:"
+      az version
+    displayName: "Install/Upgrade Azure CLI"
+
+  # 2. Use Azure Service Connection to remove role assignment
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: 'sg_admin2'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        echo "Removing role assignment..."
+        az role assignment delete \
+          --assignee 82cccb98-4264-428d-a9e9-432b9369bf7b \
+          --role "User Access Administrator" \
+          --resource-group vm
